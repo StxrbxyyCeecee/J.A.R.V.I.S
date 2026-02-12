@@ -10,21 +10,31 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { message } = req.body;
+    const { messages } = req.body;
+
+    if (!messages) {
+      return res.status(400).json({ error: "No messages provided" });
+    }
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "You are a helpful AI assistant." },
-        { role: "user", content: message }
+        {
+          role: "system",
+          content: "You are Jarvis, a futuristic AI assistant."
+        },
+        ...messages
       ]
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       reply: completion.choices[0].message.content
     });
 
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Error:", error);
+    return res.status(500).json({
+      error: "Something went wrong"
+    });
   }
 }

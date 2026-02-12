@@ -1,85 +1,134 @@
-  <!DOCTYPE html>
-  <html lang="en">
-  <head>
-  <title>My AI Chat</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body {
-      font-family: Arial;
-      background: #0f172a;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      margin: 0;
-    }
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Jarvis AI</title>
 
-    #chat {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-    }
+<style>
+body {
+  margin: 0;
+  background: radial-gradient(circle at center, #0f172a, #020617);
+  color: white;
+  font-family: Arial;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
 
-    .msg {
-      margin-bottom: 10px;
-    }
+#orb {
+  width: 150px;
+  height: 150px;
+  margin: 30px auto;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff, #0e5be9,rgb(255, 94, 0));
+  box-shadow: 0 0 40px #ffffff;
+  animation: pulse 2s infinite;
+}
 
-    .user { color: #38bdf8; }
-    .bot { color: #4ade80; }
+@keyframes pulse {
+  0% { transform: scale(1); box-shadow: 0 0 20px #2600ff; }
+  50% { transform: scale(1.1); box-shadow: 0 0 60px #3865f8; }
+  100% { transform: scale(1); box-shadow: 0 0 20px #2600ff; }
+}
 
-    #inputArea {
-      display: flex;
-      padding: 10px;
-      background: #1e293b;
-    }
+#chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px;
+}
 
-    input {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      outline: none;
-    }
+.msg { margin-bottom: 10px; }
+.user { color: #20a1d8; }
+.bot { color: #4ade80; }
 
-    button {
-      padding: 10px;
-      background: #38bdf8;
-      border: none;
-      cursor: pointer;
-    }
-  </style>
+#inputArea {
+  display: flex;
+  padding: 10px;
+  background: #1e293b;
+}
+
+input {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+}
+
+button {
+  margin-left: 5px;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #38bdf8;
+  cursor: pointer;
+}
+
+</style>
 </head>
 <body>
 
+<div id="orb"></div>
+<h1>J.A.R.V.I.S</h1>
 <div id="chat"></div>
 
 <div id="inputArea">
-  <input id="messageInput" placeholder="Type a message..." />
+  <input id="messageInput" placeholder="Talk to Jarvis..." />
+  <button onclick="startVoice()">🎤</button>
   <button onclick="sendMessage()">Send</button>
 </div>
 
 <script>
-async function sendMessage() {
+let messages = [];
+
+async function sendMessage(text = null) {
   const input = document.getElementById("messageInput");
   const chat = document.getElementById("chat");
-  const message = input.value;
 
+  const message = text || input.value;
   if (!message) return;
 
   chat.innerHTML += `<div class="msg user">You: ${message}</div>`;
   input.value = "";
 
+  messages.push({ role: "user", content: message });
+
   const response = await fetch("/api/chat", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message })
+    body: JSON.stringify({ messages })
   });
 
-  const data = await response.json();
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
 
-  chat.innerHTML += `<div class="msg bot">AI: ${data.reply}</div>`;
+  let botMessage = "";
+  chat.innerHTML += `<div class="msg bot" id="bot"></div>`;
+  const botDiv = document.getElementById("bot");
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value);
+    botMessage += chunk;
+    botDiv.innerHTML = "Jarvis: " + botMessage;
+  }
+
+  messages.push({ role: "assistant", content: botMessage });
   chat.scrollTop = chat.scrollHeight;
+}
+
+function startVoice() {
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = "en-US";
+  recognition.start();
+
+  recognition.onresult = function(event) {
+    const transcript = event.results[0][0].transcript;
+    sendMessage(transcript);
+  };
 }
 </script>
 
 </body>
 </html>
+

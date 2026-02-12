@@ -4,9 +4,14 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// 👇 IMPORTANT: force Node.js runtime
+export const config = {
+  runtime: "nodejs"
+};
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).send("Method Not Allowed");
   }
 
   try {
@@ -19,10 +24,7 @@ export default async function handler(req, res) {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        {
-          role: "system",
-          content: "You are Jarvis, a futuristic AI assistant."
-        },
+        { role: "system", content: "You are Jarvis, a futuristic AI assistant." },
         ...messages
       ]
     });
@@ -32,9 +34,9 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error("Error:", error);
+    console.error("API ERROR:", error);
     return res.status(500).json({
-      error: "Something went wrong"
+      error: error.message
     });
   }
 }
